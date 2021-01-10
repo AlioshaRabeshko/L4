@@ -28,9 +28,38 @@ namespace Test.FileWorker
         }
 
         [Fact]
+        public void TestAddFileEmpty() {
+            string fileFullPath = testsDirFullPath + "\\empty.txt";
+            string data = BaseFileWorker.ReadAll(fileFullPath);
+            Assert.True(storageDatabaseUtils.AddFile("1", Encoding.UTF8.GetBytes(data)));
+        }
+
+        [Fact]
+        public void TestAddFileNameEmpty() {
+            string fileFullPath = testsDirFullPath + "\\empty.txt";
+            string data = BaseFileWorker.ReadAll(fileFullPath);
+            Assert.False(storageDatabaseUtils.AddFile("", Encoding.UTF8.GetBytes(data)));
+        }
+
+        [Fact]
+        public void TestAddFileNameNull() {
+            string fileFullPath = testsDirFullPath + "\\empty.txt";
+            string data = BaseFileWorker.ReadAll(fileFullPath);
+            Assert.False(storageDatabaseUtils.AddFile(null, Encoding.UTF8.GetBytes(data)));
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("doesn't Exist")]
+        [InlineData("$#@%$^%$&^%$@#")]
+        public void TestAddFileNameInvalid(string filename) {
+            Assert.Throws<ArgumentNullException>(()=>storageDatabaseUtils.AddFile("1", Encoding.UTF8.GetBytes(BaseFileWorker.ReadAll(filename))));
+        }
+
+        [Fact]
         public void TestDeleteFile() {
-            int fileId = 2;
-            Assert.True(storageDatabaseUtils.DeleteFile(fileId));
+            Assert.True(storageDatabaseUtils.DeleteFile(2));
         }
 
         [Fact]
@@ -44,9 +73,18 @@ namespace Test.FileWorker
         }
 
         [Fact]
+        public void TestGetFileEmpty() {
+            storageDatabaseUtils.ExecSql("INSERT INTO dbo.Files (FileName, FileContent) values ('empty', CONVERT(varbinary(1024), ''));");
+            int fileId = (int)storageDatabaseUtils.GetIntBySql("SELECT FileID FROM dbo.Files WHERE FileName = 'empty';");
+            Assert.True(storageDatabaseUtils.GetFile(fileId, out string fileName, out byte[] fileContent));
+            Assert.Equal("empty", fileName);
+            Assert.Equal("", Encoding.UTF8.GetString(fileContent));
+            storageDatabaseUtils.ExecSql("DELETE FROM dbo.Files");
+        }
+
+        [Fact]
         public void TestGetFileNotExist() {
-            int fileId = 54644;
-            Assert.False(storageDatabaseUtils.GetFile(fileId, out _, out byte[] _));
+            Assert.False(storageDatabaseUtils.GetFile(888888, out _, out byte[] _));
         }
 
         [Fact]
@@ -66,17 +104,26 @@ namespace Test.FileWorker
         }
 
         [Fact]
-        public void TestGetFilesUndefinedName() {
-            string fileName = "NoSuchFile";
-            System.Data.DataTable table = storageDatabaseUtils.GetFiles(fileName);
+        public void TestGetFilesNullName() {
+            storageDatabaseUtils.ExecSql("INSERT INTO dbo.Files (FileName, FileContent) values ('filename', CONVERT(varbinary(1024), 'sorry for what?')), ('filename', CONVERT(varbinary(1024), 'our daddy told us not to be shame'));");
+            System.Data.DataTable table = storageDatabaseUtils.GetFiles();
+            Assert.Equal(2, table.Rows.Count);
+            storageDatabaseUtils.ExecSql("DELETE FROM dbo.Files");
+        }
+
+        [Fact]
+        public void TestGetFilesWrongName() {
+            storageDatabaseUtils.ExecSql("INSERT INTO dbo.Files (FileName, FileContent) values ('filename', CONVERT(varbinary(1024), 'sorry for what?')), ('filename', CONVERT(varbinary(1024), 'our daddy told us not to be shame'));");
+            System.Data.DataTable table = storageDatabaseUtils.GetFiles("hello ther%;№:e");
             Assert.Equal(0, table.Rows.Count);
+            storageDatabaseUtils.ExecSql("DELETE FROM dbo.Files");
         }
 
         [Fact]
         public void TestGetFilesEmptyName() {
-            storageDatabaseUtils.ExecSql("INSERT INTO dbo.Files (FileName, FileContent) values ('filename', CONVERT(varbinary(1024), 'sorry for what?')), ('filename', CONVERT(varbinary(1024), 'our daddy told us not to be shame'));");
-            System.Data.DataTable table = storageDatabaseUtils.GetFiles();
-            Assert.Equal(2, table.Rows.Count);
+            storageDatabaseUtils.ExecSql("INSERT INTO dbo.Files (FileName, FileContent) values ('', CONVERT(varbinary(1024), 'sorry for what?')), ('', CONVERT(varbinary(1024), 'our daddy told us not to be shame'));");
+            System.Data.DataTable table = storageDatabaseUtils.GetFiles("");
+            Assert.Equal(0, table.Rows.Count);
             storageDatabaseUtils.ExecSql("DELETE FROM dbo.Files");
         }
     }

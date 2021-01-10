@@ -34,17 +34,44 @@ namespace Test.BinaryFlag {
             flagDatabaseUtils.ExecSql("DELETE FROM dbo.MultipleBinaryFlags");
         }
 
-        [Fact]
-        public void TestAddFlagTrue() {
-            MultipleBinaryFlag mbf = new MultipleBinaryFlag(5);
+        [Theory]
+        [InlineData(5)]
+        [InlineData(200000)]
+        public void TestAddFlagTrue(ulong length) {
+            MultipleBinaryFlag mbf = new MultipleBinaryFlag(length);
             bool actual = mbf.GetFlag();
             Assert.True(flagDatabaseUtils.AddFlag(mbf.ToString(), actual));
             flagDatabaseUtils.ExecSql("DELETE FROM dbo.MultipleBinaryFlags");
         }
 
-        [Fact]
-        public void TestAddFlagFalse() {
-            MultipleBinaryFlag mbf = new MultipleBinaryFlag(5, false);
+        [Theory]
+        [InlineData(5)]
+        [InlineData(200000)]
+        public void TestAddFlagFalse(ulong length) {
+            MultipleBinaryFlag mbf = new MultipleBinaryFlag(length, false);
+            bool actual = mbf.GetFlag();
+            Assert.True(flagDatabaseUtils.AddFlag(mbf.ToString(), actual));
+            flagDatabaseUtils.ExecSql("DELETE FROM dbo.MultipleBinaryFlags");
+        }
+
+
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void TestAddFlag(bool direction) {
+            MultipleBinaryFlag mbf = new MultipleBinaryFlag(20, direction);
+            if (direction) {
+                mbf.SetFlag(2);
+                mbf.SetFlag(4);
+                mbf.SetFlag(9);
+                mbf.SetFlag(15);
+            } else {
+                mbf.ResetFlag(1);
+                mbf.ResetFlag(7);
+                mbf.ResetFlag(4);
+                mbf.ResetFlag(13);
+            }
             bool actual = mbf.GetFlag();
             Assert.True(flagDatabaseUtils.AddFlag(mbf.ToString(), actual));
             flagDatabaseUtils.ExecSql("DELETE FROM dbo.MultipleBinaryFlags");
